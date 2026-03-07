@@ -1,6 +1,9 @@
 
 
 
+⬜️ Understand what the kernel actually does
+
+Let's consider height 2, rounds=2 case first
 
 
 Baseline: 

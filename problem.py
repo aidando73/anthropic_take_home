@@ -414,7 +414,7 @@ class Tree:
     @staticmethod
     def generate(height: int):
         n_nodes = 2 ** (height + 1) - 1
-        values = [random.randint(0, 2**30 - 1) for _ in range(n_nodes)]
+        values = [random.randint(0, 2**4 - 1) for _ in range(n_nodes)]
         return Tree(height, values)
 
 
@@ -432,7 +432,8 @@ class Input:
     @staticmethod
     def generate(forest: Tree, batch_size: int, rounds: int):
         indices = [0 for _ in range(batch_size)]
-        values = [random.randint(0, 2**30 - 1) for _ in range(batch_size)]
+        # Temporarily reduce this - so it's easier to grok
+        values = [random.randint(0, 2**4 - 1) for _ in range(batch_size)]
         return Input(indices, values, rounds)
 
 
@@ -473,7 +474,9 @@ def reference_kernel(t: Tree, inp: Input):
     and then choose the left branch if cur_inp_val is even.
     If we reach the bottom of the tree we wrap around to the top.
     """
+    # Go through each round
     for h in range(inp.rounds):
+        # Loop through all indices
         for i in range(len(inp.indices)):
             idx = inp.indices[i]
             val = inp.values[i]
