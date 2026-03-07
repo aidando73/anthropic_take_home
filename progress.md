@@ -1,0 +1,25 @@
+
+
+
+
+
+Baseline: 
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  147734
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  147734
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  147734
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  147734
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  147734
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  147734
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  147734
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  147734
+.Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  147734
+Speedup over baseline:  1.0
