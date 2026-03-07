@@ -29,5 +29,5 @@ def run(forest_height, rounds, batch_size):
 
 # forest=Tree(height=2, values=[3, 0, 8, 7, 7, 4, 3])
 # inp=Input(indices=[0, 0, 0, 0], values=[2, 13, 1, 0], rounds=2)
-run(forest_height=2, rounds=2, batch_size=4)
+run(forest_height=2, rounds=1, batch_size=4)
 # output: Input(indices=[3, 4, 3, 4], values=[4203971800, 1184307827, 1739325048, 2129651537], rounds=2)
