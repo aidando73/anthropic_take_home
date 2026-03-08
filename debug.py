@@ -6,7 +6,8 @@ from problem import (
 )
 from perf_takehome import (
     KernelBuilder,
-    DebugInfo
+    DebugInfo,
+    do_kernel_test
 )
 
 import random
@@ -67,7 +68,12 @@ mem = [0 for _ in range(16)]
 mem[15] = 42
 
 instr = [
-    {'store': [('store', 15, 0)]}
+    # Load 15 into scratch[0]
+    {'load': [('const', 0, 15)]},
+    # Load 4 into scratch[1]
+    {'load': [('const', 1, 4)]},
+    # Store scratch[0] into address scratch[1]
+    {'store': [('store', 1, 0)]}
     # {'load': [('load', 0, 15)]}
 ]
 
@@ -82,4 +88,13 @@ machine = Machine(
 
 machine.run()
 
-print(mem)
+print(machine.cores)
+print(machine.mem)
+
+
+# do_kernel_test(
+#     forest_height=2,
+#     rounds=1,
+#     batch_size=1,
+#     prints=True
+# )
