@@ -44,6 +44,7 @@ class KernelBuilder:
         self.scratch_debug = {}
         self.scratch_ptr = 0
         self.const_map = {}
+        self.scratch_const_vecs = {}
 
     def debug_info(self):
         return DebugInfo(scratch_map=self.scratch_debug)
@@ -84,6 +85,25 @@ class KernelBuilder:
             slots.append(("debug", ("compare", val_hash_addr, (round, i, "hash_stage", hi))))
 
         return slots
+
+    def build_hash_vec(self, val_hash_addr, tmp1, tmp2, round, i):
+        slots = []
+
+        for hi, (op1, val1, op2, op3, val3) in enumerate(HASH_STAGES):
+            slots.append(("valu", (op1, tmp1, val_hash_addr, self.scratch_const_vec(val1))))
+            slots.append(("valu", (op3, tmp2, val_hash_addr, self.scratch_const_vec(val3))))
+            slots.append(("valu", (op2, val_hash_addr, tmp1, tmp2)))
+
+        return slots
+
+    def scratch_const_vec(self, const):
+        if const not in self.scratch_const_vecs:
+            c = self.scratch_const(const)
+            self.alloc_scratch(f"const:{const}", VLEN-1)
+            self.add("valu", ("vbroadcast", c, c))
+            self.scratch_const_vecs[const] = c
+            return c
+        return self.scratch_const_vecs[const]
 
     def build_kernel(
         self, forest_height: int, n_nodes: int, batch_size: int, rounds: int
@@ -152,6 +172,8 @@ class KernelBuilder:
 
         tmp3_vec = self.alloc_scratch(f"tmp3_vec", 8)
 
+        tmp4_vec = self.alloc_scratch(f"tmp4_vec", 8)
+
         # for i in range(VLEN - 1):
             # self.scratch_const(VLEN)
 
@@ -173,14 +195,17 @@ class KernelBuilder:
                 # val = mem[inp_values_p + i]
                 body.append(("load", ("vload", tmp2_vec, inp_values_p_vec)))
 
-                # node_val = mem[forest_values_p + idx]
+                # node_val = mem[forest_values_p + idx] = tmp3_vec
                 body.append(("valu", ("+", tmp3_vec, forest_values_p_vec, tmp1_vec)))
-                body.append(("load", ("vload", tmp3_vec, tmp3_vec)))
+                # Not sure how to do these loads vectorized yet - TODO
+                for k in range(0, VLEN):
+                    body.append(("load", ("load", tmp3_vec + k, tmp3_vec + k)))
 
-        #         body.append(("load", ("load", tmp_node_val, tmp_addr)))
-        #         # val = myhash(val ^ node_val)
-        #         body.append(("alu", ("^", tmp_val, tmp_val, tmp_node_val)))
-        #         body.extend(self.build_hash(tmp_val, tmp1, tmp2, round, i))
+                # val = myhash(val ^ node_val); tmp2_vec=val, tmp3_vec=node_val; 
+                body.append(("alu", ("^", tmp2_vec, tmp2_vec, tmp3_vec)))
+                body.extend(self.build_hash_vec(tmp4_vec, tmp1_vec, tmp2_vec, round, i))
+
+                # body.extend(self.build_hash(tmp_val, tmp1, tmp2, round, i))
         #         # idx = 2*idx + (1 if val % 2 == 0 else 2)
         #         body.append(("alu", ("%", tmp1, tmp_val, two_const)))
         #         body.append(("alu", ("==", tmp1, tmp1, zero_const)))

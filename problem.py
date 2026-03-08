@@ -440,17 +440,17 @@ class Input:
 HASH_STAGES = [
     # Simple hash so we can trace through the code
     # Basically a * 2
-    # ("+", 0, "+", "<<", 0),
+    ("+", 0, "+", "<<", 0),
 
     # Temporary: Just focus on one stage for now - to understand the tree-traversal part
     # Some set of computations
     # TODO: Can we fuse some of these ops together?
-    ("+", 0x7ED55D16, "+", "<<", 12),
-    ("^", 0xC761C23C, "^", ">>", 19),
-    ("+", 0x165667B1, "+", "<<", 5),
-    ("+", 0xD3A2646C, "^", "<<", 9),
-    ("+", 0xFD7046C5, "+", "<<", 3),
-    ("^", 0xB55A4F09, "^", ">>", 16),
+    # ("+", 0x7ED55D16, "+", "<<", 12),
+    # ("^", 0xC761C23C, "^", ">>", 19),
+    # ("+", 0x165667B1, "+", "<<", 5),
+    # ("+", 0xD3A2646C, "^", "<<", 9),
+    # ("+", 0xFD7046C5, "+", "<<", 3),
+    # ("^", 0xB55A4F09, "^", ">>", 16),
 ]
 
 
