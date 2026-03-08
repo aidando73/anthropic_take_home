@@ -471,7 +471,7 @@ def myhash(a: int) -> int:
 
     return a
 
-def myhash2()
+def myhash2():
     """A simple 32-bit hash function"""
     fns = {
         "+": lambda x, y: x + y,
