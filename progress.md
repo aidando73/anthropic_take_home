@@ -1,7 +1,7 @@
 
 ⬜️ Confirm: Can we overlap ops across multiple engines?
 
-⬜️ Parallelize across the batch dimension - vectorize the implementations
+✅ Parallelize across the batch dimension - vectorize the implementations (with help from Claude)
 
 ✅ Understand how flow works
 
