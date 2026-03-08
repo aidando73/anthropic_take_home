@@ -65,7 +65,10 @@ import json
 # 2KB of memory
 mem = [0 for _ in range(16)]
 
-mem[15] = 42
+mem[12] = 41
+mem[13] = 42
+mem[14] = 43
+mem[15] = 44
 
 instr = [
     # Program #1: Load 15 into scratch, then write it to memory[4]
@@ -83,6 +86,11 @@ instr = [
     # {'load': [('const', 1, 4)]},
     # {'load': [('load', 2, 0)]},
     # {'store': [('store', 1, 2)]}
+
+    # Program 3: Use vload and vstore - store the vector to the start
+    {'load': [('const', 0, 7)]},
+    {'load': [('vload', 0, 7)]},
+
 ]
 
 machine = Machine(

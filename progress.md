@@ -1,4 +1,12 @@
 
+⬜️ 
+
+⬜️ Parallelize across the batch dimension
+
+⬜️ Understand vectorized ops - vload and vstore
+
+VLEN=8 - hardcoded
+
 
 ✅ Understand basic load and store ops
 
