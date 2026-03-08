@@ -47,7 +47,7 @@ def run(forest_height, rounds, batch_size):
 forest_height=2
 n_nodes = 2**3
 rounds=1
-batch_size=1
+batch_size=8
 
 forest = Tree.generate(forest_height)
 orig_inp = Input.generate(forest, batch_size, rounds)
@@ -100,26 +100,26 @@ instr = [
 ]
 
 # kb.build_kernel2()
-kb.build_kernel(forest_height, len(forest.values), batch_size, rounds)
+# kb.build_kernel(forest_height, len(forest.values), batch_size, rounds)
 
-machine = Machine(
-    mem,
-    kb.instrs,
-    DebugInfo(scratch_map={}),
-    n_cores=1,
-    value_trace={},
-    trace=False,
-)
-
-machine.run()
-
-print(machine.cores)
-print(machine.mem)
-
-
-# do_kernel_test(
-#     forest_height=2,
-#     rounds=1,
-#     batch_size=1,
-#     prints=True
+# machine = Machine(
+#     mem,
+#     kb.instrs,
+#     DebugInfo(scratch_map={}),
+#     n_cores=1,
+#     value_trace={},
+#     trace=False,
 # )
+
+# machine.run()
+
+# print(machine.cores)
+# print(machine.mem)
+
+
+do_kernel_test(
+    forest_height=2,
+    rounds=1,
+    batch_size=1,
+    prints=True
+)

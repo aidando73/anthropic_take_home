@@ -121,23 +121,35 @@ class KernelBuilder:
 
         body = []  # array of slots
 
-        idxes = self.alloc_scratch(f"idxes", 8)
+        # Allocate 8 vector - so we can add 8
+        eight_const = self.scratch_const(VLEN)
+        eight_vec = self.alloc_scratch(f"eight_vec", VLEN-1) # -1 because previous elem is already eight_const
+        self.add("valu", ("vbroadcast", eight_const, eight_const))
+
+
+        offsets = self.alloc_scratch(f"idxes", 8)
         for i in range(VLEN):
-            self.add("load", ("const", idxes + i, i))
+            self.add("load", ("const", offsets + i, i))
+        
+        # for i in range(VLEN - 1):
+            # self.scratch_const(VLEN)
+
+        # tmp_offsets = self.alloc_scratch("tmp_offsets")
 
         # Scalar scratch registers
         # tmp_idx = self.alloc_scratch("tmp_idx")
         # tmp_val = self.alloc_scratch("tmp_val")
         # tmp_node_val = self.alloc_scratch("tmp_node_val")
-        # tmp_addr = self.alloc_scratch("tmp_addr")
+        tmp_addr = self.alloc_scratch("tmp_addr", VLEN)
 
-        # for round in range(rounds):
+        for round in range(rounds):
         #     # TODO: Vectorize this implementation
-        #     for i in range(batch_size):
-        #         i_const = self.scratch_const(i)
-        #         # idx = mem[inp_indices_p + i]
-        #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_indices_p"], i_const)))
-        #         body.append(("load", ("load", tmp_idx, tmp_addr)))
+            for i in range(0, batch_size, VLEN):
+                print(f"bs{i}")
+                # idx = mem[inp_indices_p + i]
+                body.append(("valu", ("+", tmp_addr, self.scratch["inp_indices_p"], offsets)))
+                # body.append(("load", ("load", tmp_idx, tmp_addr)))
+
         #         # val = mem[inp_values_p + i]
         #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
         #         body.append(("load", ("load", tmp_val, tmp_addr)))
@@ -162,6 +174,13 @@ class KernelBuilder:
         #         # mem[inp_values_p + i] = val
         #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
         #         body.append(("store", ("store", tmp_addr, tmp_val)))
+
+                # update the offsets for next iteration
+                # self.add("valu", ("+", offsets, offsets, eight_const))
+
+                # Graveyard
+                # self.add("load", ("vload", offsets, tmp_offsets))
+                # print(i)
 
         body_instrs = self.build(body)
         self.instrs.extend(body_instrs)
@@ -302,6 +321,17 @@ def do_kernel_test(
     machine.prints = prints
     for i, ref_mem in enumerate(reference_kernel2(mem, value_trace)):
         machine.run()
+
+
+        print(f"tmps: {machine.cores[0].scratch[0:3]}")
+        print(f"init: {machine.cores[0].scratch[3:3+7]}")
+        print(f"const: {machine.cores[0].scratch[10:13]}")
+        print(f"8_vec: {machine.cores[0].scratch[13:21]}")
+        print(f"arange: {machine.cores[0].scratch[21:29]}")
+        print(f"rest: {machine.cores[0].scratch[29:50]}")
+
+        exit()
+
         inp_values_p = ref_mem[6]
         if prints:
             print(machine.mem[inp_values_p : inp_values_p + len(inp.values)])
