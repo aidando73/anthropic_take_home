@@ -64,8 +64,11 @@ import json
 # 2KB of memory
 mem = [0 for _ in range(16)]
 
+mem[15] = 42
+
 instr = [
-    {'load': [('const', 0, 10)]}
+    {'store': [('store', 15, 0)]}
+    # {'load': [('load', 0, 15)]}
 ]
 
 machine = Machine(
