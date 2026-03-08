@@ -122,9 +122,9 @@ class KernelBuilder:
         body = []  # array of slots
 
         # Allocate 8 vector - so we can add 8
-        eight_const = self.scratch_const(VLEN)
-        eight_vec = self.alloc_scratch(f"eight_vec", VLEN-1) # -1 because previous elem is already eight_const
-        self.add("valu", ("vbroadcast", eight_const, eight_const))
+        eight_vec = self.scratch_const(VLEN)
+        self.alloc_scratch(f"eight_vec", VLEN-1) # -1 because previous elem is already eight_const
+        self.add("valu", ("vbroadcast", eight_vec, eight_vec))
 
 
         # Initialize inp_indices_p_vec
@@ -140,8 +140,10 @@ class KernelBuilder:
         inp_values_p_vec = self.alloc_scratch(f"inp_values_p_vec", 8)
         for i in range(VLEN):
             self.add("load", ("const", inp_values_p_vec + i, i))
-        tmp1_vec = self.alloc_scratch(f"tmp1_vec", 8)
         self.add("valu", ("vbroadcast", tmp1_vec, self.scratch["inp_values_p"]))
+        self.add("valu", ("+", inp_values_p_vec, inp_values_p_vec, tmp1_vec))
+
+        tmp2_vec = self.alloc_scratch(f"tmp2_vec", 8)
 
         # for i in range(VLEN - 1):
             # self.scratch_const(VLEN)
@@ -162,7 +164,7 @@ class KernelBuilder:
                 body.append(("load", ("vload", tmp1_vec, inp_indices_p_vec)))
 
                 # val = mem[inp_values_p + i]
-
+                body.append(("load", ("vload", tmp2_vec, inp_values_p_vec)))
 
         #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
         #         body.append(("load", ("load", tmp_val, tmp_addr)))
@@ -189,7 +191,9 @@ class KernelBuilder:
         #         body.append(("store", ("store", tmp_addr, tmp_val)))
 
                 # update the offsets for next iteration
-                # self.add("valu", ("+", offsets, offsets, eight_const))
+                if i + VLEN < batch_size:
+                    self.add("valu", ("+", inp_indices_p_vec, inp_indices_p_vec, eight_vec))
+                    self.add("valu", ("+", inp_values_p_vec, inp_values_p_vec, eight_vec))
 
                 # Graveyard
                 # self.add("load", ("vload", offsets, tmp_offsets))
@@ -343,7 +347,9 @@ def do_kernel_test(
         print(f"8_vec: {machine.cores[0].scratch[13:21]}")
         print(f"inp_indices_p_vec: {machine.cores[0].scratch[21:29]}")
         print(f"tmp1_vec: {machine.cores[0].scratch[29:37]}")
-        print(f"rest: {machine.cores[0].scratch[37:50]}")
+        print(f"inp_values_p_vec: {machine.cores[0].scratch[37:45]}")
+        print(f"tmp2_vec: {machine.cores[0].scratch[45:53]}")
+        
 
         print(f"header: {machine.mem[0:7]}")
         print(f"t.value: {machine.mem[7:7+7]}")
