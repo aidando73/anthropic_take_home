@@ -106,7 +106,9 @@ class KernelBuilder:
             "inp_values_p",
         ]
         for v in init_vars:
+            # Allocating addresses
             self.alloc_scratch(v, 1)
+
         for i, v in enumerate(init_vars):
             self.add("load", ("const", tmp1, i))
             self.add("load", ("load", self.scratch[v], tmp1))
