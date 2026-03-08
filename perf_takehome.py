@@ -145,6 +145,13 @@ class KernelBuilder:
 
         tmp2_vec = self.alloc_scratch(f"tmp2_vec", 8)
 
+        # Initialize forest_values_p_vec
+        forest_values_p_vec = self.alloc_scratch(f"forest_values_p_vec", 8)
+        self.add("valu", ("vbroadcast", tmp1_vec, self.scratch["forest_values_p"]))
+        self.add("valu", ("+", forest_values_p_vec, forest_values_p_vec, tmp1_vec))
+
+        tmp3_vec = self.alloc_scratch(f"tmp3_vec", 8)
+
         # for i in range(VLEN - 1):
             # self.scratch_const(VLEN)
 
@@ -166,10 +173,10 @@ class KernelBuilder:
                 # val = mem[inp_values_p + i]
                 body.append(("load", ("vload", tmp2_vec, inp_values_p_vec)))
 
-        #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
-        #         body.append(("load", ("load", tmp_val, tmp_addr)))
-        #         # node_val = mem[forest_values_p + idx]
-        #         body.append(("alu", ("+", tmp_addr, self.scratch["forest_values_p"], tmp_idx)))
+                # node_val = mem[forest_values_p + idx]
+                body.append(("valu", ("+", tmp3_vec, forest_values_p_vec, tmp1_vec)))
+                body.append(("load", ("vload", tmp3_vec, tmp3_vec)))
+
         #         body.append(("load", ("load", tmp_node_val, tmp_addr)))
         #         # val = myhash(val ^ node_val)
         #         body.append(("alu", ("^", tmp_val, tmp_val, tmp_node_val)))
@@ -321,6 +328,7 @@ def do_kernel_test(
     forest = Tree.generate(forest_height)
     inp = Input.generate(forest, batch_size, rounds)
     mem = build_mem_image(forest, inp)
+    print(f"forest={forest.values}")
     print(f"input_mem={mem}")
 
     kb = KernelBuilder()
@@ -349,7 +357,8 @@ def do_kernel_test(
         print(f"tmp1_vec: {machine.cores[0].scratch[29:37]}")
         print(f"inp_values_p_vec: {machine.cores[0].scratch[37:45]}")
         print(f"tmp2_vec: {machine.cores[0].scratch[45:53]}")
-        
+        print(f"forest_values_p_vec: {machine.cores[0].scratch[53:61]}")
+        print(f"tmp3_vec: {machine.cores[0].scratch[61:69]}")
 
         print(f"header: {machine.mem[0:7]}")
         print(f"t.value: {machine.mem[7:7+7]}")
