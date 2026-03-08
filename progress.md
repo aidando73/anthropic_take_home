@@ -1,5 +1,6 @@
 
-⬜️ 
+⬜️ Confirm: Can we overlap ops across multiple engines?
+- 
 
 ⬜️ Parallelize across the batch dimension
 
