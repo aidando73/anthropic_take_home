@@ -177,9 +177,17 @@ class KernelBuilder:
         self.instrs.append({"flow": [("pause",)]})
     
     def build_kernel2(self):
-        tmp1 = self.alloc_scratch("tmp1")
+        # Program 4 - try predicates
+        inp = self.alloc_scratch("inp")
+        inp2 = self.alloc_scratch("inp2")
+        pred = self.alloc_scratch("pred")
+        out = self.alloc_scratch("out")
+        self.add("load", ("const", inp, 21))
+        self.add("load", ("const", inp2, 100))
 
-        self.add("load", ("const", tmp1, 21))
+        self.add("load", ("const", pred, 1))
+
+        self.add("flow", ("select", out, pred, inp, inp2))
 
 BASELINE = 147734
 
