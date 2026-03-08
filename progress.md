@@ -1,6 +1,6 @@
 
 
-⬜️ Understand basic load and store ops
+✅ Understand basic load and store ops
 
 ✅ Understand the hashing algorithm
 

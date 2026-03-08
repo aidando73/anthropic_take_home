@@ -68,13 +68,21 @@ mem = [0 for _ in range(16)]
 mem[15] = 42
 
 instr = [
+    # Program #1: Load 15 into scratch, then write it to memory[4]
     # Load 15 into scratch[0]
-    {'load': [('const', 0, 15)]},
+    # {'load': [('const', 0, 15)]},
     # Load 4 into scratch[1]
-    {'load': [('const', 1, 4)]},
+    # {'load': [('const', 1, 4)]},
     # Store scratch[0] into address scratch[1]
-    {'store': [('store', 1, 0)]}
+    # {'store': [('store', 1, 0)]},
     # {'load': [('load', 0, 15)]}
+
+
+    # Program 2: Load 42 into scratch, then write it to memory[4]
+    # {'load': [('const', 0, 15)]},
+    # {'load': [('const', 1, 4)]},
+    # {'load': [('load', 2, 0)]},
+    # {'store': [('store', 1, 2)]}
 ]
 
 machine = Machine(
