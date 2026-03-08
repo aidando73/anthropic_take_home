@@ -98,39 +98,26 @@ class KernelBuilder:
 
     def scratch_const_vec(self, const):
         if const not in self.scratch_const_vecs:
-            c = self.scratch_const(const)
-            self.alloc_scratch(f"const:{const}", VLEN-1)
-            self.add("valu", ("vbroadcast", c, c))
-            self.scratch_const_vecs[const] = c
-            return c
+            addr = self.alloc_scratch(f"const_vec:{const}", VLEN)
+            self.add("load", ("const", addr, const))
+            self.add("valu", ("vbroadcast", addr, addr))
+            self.scratch_const_vecs[const] = addr
+            return addr
         return self.scratch_const_vecs[const]
 
     def build_kernel(
         self, forest_height: int, n_nodes: int, batch_size: int, rounds: int
     ):
-        """
-        New implementation:
-        - torch.arange(-8, 0) into scratch to initialize our indexes
-        - Change forloop to i in range(0, batch_size, VLEN):
-            # 
-        """
         tmp1 = self.alloc_scratch("tmp1")
         tmp2 = self.alloc_scratch("tmp2")
         tmp3 = self.alloc_scratch("tmp3")
-        # Scratch space addresses
+
         init_vars = [
-            "rounds",
-            "n_nodes",
-            "batch_size",
-            "forest_height",
-            "forest_values_p",
-            "inp_indices_p",
-            "inp_values_p",
+            "rounds", "n_nodes", "batch_size", "forest_height",
+            "forest_values_p", "inp_indices_p", "inp_values_p",
         ]
         for v in init_vars:
-            # Allocating addresses
             self.alloc_scratch(v, 1)
-
         for i, v in enumerate(init_vars):
             self.add("load", ("const", tmp1, i))
             self.add("load", ("load", self.scratch[v], tmp1))
@@ -138,101 +125,76 @@ class KernelBuilder:
         zero_const = self.scratch_const(0)
         one_const = self.scratch_const(1)
         two_const = self.scratch_const(2)
+        eight_const = self.scratch_const(VLEN)
 
-        body = []  # array of slots
+        self.add("flow", ("pause",))
 
-        # Allocate 8 vector - so we can add 8
-        eight_vec = self.scratch_const(VLEN)
-        self.alloc_scratch(f"eight_vec", VLEN-1) # -1 because previous elem is already eight_const
-        self.add("valu", ("vbroadcast", eight_vec, eight_vec))
+        # Vector constants
+        zero_vec = self.scratch_const_vec(0)
+        one_vec = self.scratch_const_vec(1)
+        two_vec = self.scratch_const_vec(2)
 
+        n_nodes_vec = self.alloc_scratch("n_nodes_vec", VLEN)
+        self.add("valu", ("vbroadcast", n_nodes_vec, self.scratch["n_nodes"]))
 
-        # Initialize inp_indices_p_vec
-        inp_indices_p_vec = self.alloc_scratch(f"inp_indices_p_vec", 8)
-        for i in range(VLEN):
-            self.add("load", ("const", inp_indices_p_vec + i, i))
-        
-        tmp1_vec = self.alloc_scratch(f"tmp1_vec", 8)
-        self.add("valu", ("vbroadcast", tmp1_vec, self.scratch["inp_indices_p"]))
-        self.add("valu", ("+", inp_indices_p_vec, inp_indices_p_vec, tmp1_vec))
-        
-        # Initialize inp_values_p_vec
-        inp_values_p_vec = self.alloc_scratch(f"inp_values_p_vec", 8)
-        for i in range(VLEN):
-            self.add("load", ("const", inp_values_p_vec + i, i))
-        self.add("valu", ("vbroadcast", tmp1_vec, self.scratch["inp_values_p"]))
-        self.add("valu", ("+", inp_values_p_vec, inp_values_p_vec, tmp1_vec))
+        forest_p_vec = self.alloc_scratch("forest_p_vec", VLEN)
+        self.add("valu", ("vbroadcast", forest_p_vec, self.scratch["forest_values_p"]))
 
-        tmp2_vec = self.alloc_scratch(f"tmp2_vec", 8)
+        # Scalar base addresses for contiguous vload/vstore
+        idx_base = self.alloc_scratch("idx_base")
+        val_base = self.alloc_scratch("val_base")
 
-        # Initialize forest_values_p_vec
-        forest_values_p_vec = self.alloc_scratch(f"forest_values_p_vec", 8)
-        self.add("valu", ("vbroadcast", tmp1_vec, self.scratch["forest_values_p"]))
-        self.add("valu", ("+", forest_values_p_vec, forest_values_p_vec, tmp1_vec))
+        # Vector scratch registers
+        idx_vec = self.alloc_scratch("idx_vec", VLEN)
+        val_vec = self.alloc_scratch("val_vec", VLEN)
+        node_val_vec = self.alloc_scratch("node_val_vec", VLEN)
+        gather_addr_vec = self.alloc_scratch("gather_addr_vec", VLEN)
+        tmp1_vec = self.alloc_scratch("tmp1_vec", VLEN)
+        tmp2_vec = self.alloc_scratch("tmp2_vec", VLEN)
 
-        tmp3_vec = self.alloc_scratch(f"tmp3_vec", 8)
-
-        tmp4_vec = self.alloc_scratch(f"tmp4_vec", 8)
-
-        # for i in range(VLEN - 1):
-            # self.scratch_const(VLEN)
-
-        # tmp_offsets = self.alloc_scratch("tmp_offsets")
-
-        # Scalar scratch registers
-        # tmp_idx = self.alloc_scratch("tmp_idx")
-        # tmp_val = self.alloc_scratch("tmp_val")
-        # tmp_node_val = self.alloc_scratch("tmp_node_val")
-        # tmp_addr = self.alloc_scratch("tmp_addr", VLEN)
+        body = []
 
         for round in range(rounds):
-            # TODO: Handle non % 8 != 0 cases
+            body.append(("alu", ("+", idx_base, self.scratch["inp_indices_p"], zero_const)))
+            body.append(("alu", ("+", val_base, self.scratch["inp_values_p"], zero_const)))
+
             for i in range(0, batch_size, VLEN):
-                print(f"bs{i}")
-                # idx = mem[inp_indices_p + i]
-                body.append(("load", ("vload", tmp1_vec, inp_indices_p_vec)))
+                # Load VLEN indices and values (contiguous in memory)
+                body.append(("load", ("vload", idx_vec, idx_base)))
+                body.append(("load", ("vload", val_vec, val_base)))
 
-                # val = mem[inp_values_p + i]
-                body.append(("load", ("vload", tmp2_vec, inp_values_p_vec)))
+                # Gather: node_val[k] = mem[forest_values_p + idx[k]]
+                body.append(("valu", ("+", gather_addr_vec, forest_p_vec, idx_vec)))
+                for k in range(VLEN):
+                    body.append(("load", ("load", node_val_vec + k, gather_addr_vec + k)))
 
-                # node_val = mem[forest_values_p + idx] = tmp3_vec
-                body.append(("valu", ("+", tmp3_vec, forest_values_p_vec, tmp1_vec)))
-                # Not sure how to do these loads vectorized yet - TODO
-                for k in range(0, VLEN):
-                    body.append(("load", ("load", tmp3_vec + k, tmp3_vec + k)))
+                # val = myhash(val ^ node_val)
+                body.append(("valu", ("^", val_vec, val_vec, node_val_vec)))
+                body.extend(self.build_hash_vec(val_vec, tmp1_vec, tmp2_vec, round, i))
 
-                # val = myhash(val ^ node_val); tmp2_vec=val, tmp3_vec=node_val; 
-                body.append(("alu", ("^", tmp2_vec, tmp2_vec, tmp3_vec)))
-                body.extend(self.build_hash_vec(tmp4_vec, tmp1_vec, tmp2_vec, round, i))
+                # idx = 2*idx + (1 if val%2==0 else 2)
+                body.append(("valu", ("%", tmp1_vec, val_vec, two_vec)))
+                body.append(("valu", ("==", tmp1_vec, tmp1_vec, zero_vec)))
+                body.append(("flow", ("vselect", tmp2_vec, tmp1_vec, one_vec, two_vec)))
+                body.append(("valu", ("*", idx_vec, idx_vec, two_vec)))
+                body.append(("valu", ("+", idx_vec, idx_vec, tmp2_vec)))
 
-                # body.extend(self.build_hash(tmp_val, tmp1, tmp2, round, i))
-        #         # idx = 2*idx + (1 if val % 2 == 0 else 2)
-        #         body.append(("alu", ("%", tmp1, tmp_val, two_const)))
-        #         body.append(("alu", ("==", tmp1, tmp1, zero_const)))
-        #         body.append(("flow", ("select", tmp3, tmp1, one_const, two_const)))
-        #         body.append(("alu", ("*", tmp_idx, tmp_idx, two_const)))
-        #         body.append(("alu", ("+", tmp_idx, tmp_idx, tmp3)))
-        #         # idx = 0 if idx >= n_nodes else idx
-        #         body.append(("alu", ("<", tmp1, tmp_idx, self.scratch["n_nodes"])))
-        #         body.append(("flow", ("select", tmp_idx, tmp1, tmp_idx, zero_const)))
-        #         # mem[inp_indices_p + i] = idx
-        #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_indices_p"], i_const)))
-        #         body.append(("store", ("store", tmp_addr, tmp_idx)))
-        #         # mem[inp_values_p + i] = val
-        #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
-        #         body.append(("store", ("store", tmp_addr, tmp_val)))
+                # idx = 0 if idx >= n_nodes else idx
+                body.append(("valu", ("<", tmp1_vec, idx_vec, n_nodes_vec)))
+                body.append(("flow", ("vselect", idx_vec, tmp1_vec, idx_vec, zero_vec)))
 
-                # update the offsets for next iteration
+                # Store results back (contiguous)
+                body.append(("store", ("vstore", idx_base, idx_vec)))
+                body.append(("store", ("vstore", val_base, val_vec)))
+
+                # Advance base addresses for next VLEN chunk
                 if i + VLEN < batch_size:
-                    self.add("valu", ("+", inp_indices_p_vec, inp_indices_p_vec, eight_vec))
-                    self.add("valu", ("+", inp_values_p_vec, inp_values_p_vec, eight_vec))
-
-                # Graveyard
-                # self.add("load", ("vload", offsets, tmp_offsets))
-                # print(i)
+                    body.append(("alu", ("+", idx_base, idx_base, eight_const)))
+                    body.append(("alu", ("+", val_base, val_base, eight_const)))
 
         body_instrs = self.build(body)
         self.instrs.extend(body_instrs)
+        self.instrs.append({"flow": [("pause",)]})
 
     def build_kerne1(
         self, forest_height: int, n_nodes: int, batch_size: int, rounds: int
@@ -372,23 +334,6 @@ def do_kernel_test(
     machine.prints = prints
     for i, ref_mem in enumerate(reference_kernel2(mem, value_trace)):
         machine.run()
-
-
-        print(f"tmps: {machine.cores[0].scratch[0:3]}")
-        print(f"init: {machine.cores[0].scratch[3:3+7]}")
-        print(f"const: {machine.cores[0].scratch[10:13]}")
-        print(f"8_vec: {machine.cores[0].scratch[13:21]}")
-        print(f"inp_indices_p_vec: {machine.cores[0].scratch[21:29]}")
-        print(f"tmp1_vec: {machine.cores[0].scratch[29:37]}")
-        print(f"inp_values_p_vec: {machine.cores[0].scratch[37:45]}")
-        print(f"tmp2_vec: {machine.cores[0].scratch[45:53]}")
-        print(f"forest_values_p_vec: {machine.cores[0].scratch[53:61]}")
-        print(f"tmp3_vec: {machine.cores[0].scratch[61:69]}")
-
-        print(f"header: {machine.mem[0:7]}")
-        print(f"t.value: {machine.mem[7:7+7]}")
-
-        exit()
 
         inp_values_p = ref_mem[6]
         if prints:
