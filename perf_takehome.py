@@ -175,6 +175,11 @@ class KernelBuilder:
         self.instrs.extend(body_instrs)
         # Required to match with the yield in reference_kernel2
         self.instrs.append({"flow": [("pause",)]})
+    
+    def build_kernel2(self):
+        tmp1 = self.alloc_scratch("tmp1")
+
+        self.add("load", ("const", tmp1, 21))
 
 BASELINE = 147734
 

@@ -52,8 +52,8 @@ batch_size=1
 forest = Tree.generate(forest_height)
 orig_inp = Input.generate(forest, batch_size, rounds)
 
-builder = KernelBuilder()
-builder.build_kernel(forest_height, len(forest.values), batch_size, rounds)
+kb = KernelBuilder()
+# builder.build_kernel(forest_height, len(forest.values), batch_size, rounds)
 
 import json
 
@@ -89,19 +89,21 @@ instr = [
 
     # Program 3: Use vload and vstore - store the vector to the start
     # scratch[0]=dest_addr=8
-    {'load': [('const', 0, 8)]},
+    # {'load': [('const', 0, 8)]},
     # scratch[1]=dest_addr=0
-    {'load': [('const', 1, 0)]},
+    # {'load': [('const', 1, 0)]},
     # scratch[2:2+8]=mem[8:16]
-    {'load': [('vload', 2, 0)]},
+    # {'load': [('vload', 2, 0)]},
     # mem[0:8]=scratch[2:2+8]
-    {'store': [('vstore', 1, 2)]}
+    # {'store': [('vstore', 1, 2)]}
 
 ]
 
+kb.build_kernel2()
+
 machine = Machine(
     mem,
-    instr,
+    kb.instrs,
     DebugInfo(scratch_map={}),
     n_cores=1,
     value_trace={},
