@@ -1,9 +1,9 @@
 
 ⬜️ Confirm: Can we overlap ops across multiple engines?
 
-⬜️ Parallelize across the batch dimension
+⬜️ Parallelize across the batch dimension - vectorize the implementations
 
-⬜️ Understand how flow works
+✅ Understand how flow works
 
 ✅ Understand vectorized ops - vload and vstore
 
