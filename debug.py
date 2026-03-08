@@ -120,6 +120,6 @@ instr = [
 do_kernel_test(
     forest_height=2,
     rounds=1,
-    batch_size=1,
+    batch_size=16,
     prints=True
 )
