@@ -127,14 +127,22 @@ class KernelBuilder:
         self.add("valu", ("vbroadcast", eight_const, eight_const))
 
 
-        inp_indices_p_offsets = self.alloc_scratch(f"idxes", 8)
+        # Initialize inp_indices_p_vec
+        inp_indices_p_vec = self.alloc_scratch(f"inp_indices_p_vec", 8)
         for i in range(VLEN):
-            self.add("load", ("const", inp_indices_p_offsets + i, i))
+            self.add("load", ("const", inp_indices_p_vec + i, i))
         
         tmp1_vec = self.alloc_scratch(f"tmp1_vec", 8)
         self.add("valu", ("vbroadcast", tmp1_vec, self.scratch["inp_indices_p"]))
-        self.add("valu", ("+", inp_indices_p_offsets, inp_indices_p_offsets, tmp1_vec))
+        self.add("valu", ("+", inp_indices_p_vec, inp_indices_p_vec, tmp1_vec))
         
+        # Initialize inp_values_p_vec
+        inp_values_p_vec = self.alloc_scratch(f"inp_values_p_vec", 8)
+        for i in range(VLEN):
+            self.add("load", ("const", inp_values_p_vec + i, i))
+        tmp1_vec = self.alloc_scratch(f"tmp1_vec", 8)
+        self.add("valu", ("vbroadcast", tmp1_vec, self.scratch["inp_values_p"]))
+
         # for i in range(VLEN - 1):
             # self.scratch_const(VLEN)
 
@@ -151,9 +159,11 @@ class KernelBuilder:
             for i in range(0, batch_size, VLEN):
                 print(f"bs{i}")
                 # idx = mem[inp_indices_p + i]
-                body.append(("load", ("vload", tmp1_vec, inp_indices_p_offsets)))
+                body.append(("load", ("vload", tmp1_vec, inp_indices_p_vec)))
 
                 # val = mem[inp_values_p + i]
+
+
         #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
         #         body.append(("load", ("load", tmp_val, tmp_addr)))
         #         # node_val = mem[forest_values_p + idx]
@@ -331,7 +341,7 @@ def do_kernel_test(
         print(f"init: {machine.cores[0].scratch[3:3+7]}")
         print(f"const: {machine.cores[0].scratch[10:13]}")
         print(f"8_vec: {machine.cores[0].scratch[13:21]}")
-        print(f"inp_indices_p_offsets: {machine.cores[0].scratch[21:29]}")
+        print(f"inp_indices_p_vec: {machine.cores[0].scratch[21:29]}")
         print(f"tmp1_vec: {machine.cores[0].scratch[29:37]}")
         print(f"rest: {machine.cores[0].scratch[37:50]}")
 
