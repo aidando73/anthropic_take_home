@@ -1,8 +1,8 @@
 
 
-⬜️ Understand the hashing algorithm
+⬜️ Understand basic load and store ops
 
-
+✅ Understand the hashing algorithm
 
 ✅ Understand tree traversal
 

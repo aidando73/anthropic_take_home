@@ -2,9 +2,11 @@ from problem import (
     Tree,
     Input,
     reference_kernel,
+    Machine
 )
 from perf_takehome import (
-    KernelBuilder
+    KernelBuilder,
+    DebugInfo
 )
 
 import random
@@ -56,5 +58,25 @@ import json
 
 # print(json.dumps(builder.instrs, indent=2))
 
-for inst in builder.instrs:
-    print(inst)
+# for inst in builder.instrs:
+#     print(inst)
+
+# 2KB of memory
+mem = [0 for _ in range(16)]
+
+instr = [
+    {'load': [('const', 0, 10)]}
+]
+
+machine = Machine(
+    mem,
+    instr,
+    DebugInfo(scratch_map={}),
+    n_cores=1,
+    value_trace={},
+    trace=False,
+)
+
+machine.run()
+
+print(mem)
