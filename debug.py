@@ -88,8 +88,14 @@ instr = [
     # {'store': [('store', 1, 2)]}
 
     # Program 3: Use vload and vstore - store the vector to the start
-    {'load': [('const', 0, 7)]},
-    {'load': [('vload', 0, 7)]},
+    # scratch[0]=dest_addr=8
+    {'load': [('const', 0, 8)]},
+    # scratch[1]=dest_addr=0
+    {'load': [('const', 1, 0)]},
+    # scratch[2:2+8]=mem[8:16]
+    {'load': [('vload', 2, 0)]},
+    # mem[0:8]=scratch[2:2+8]
+    {'store': [('vstore', 1, 2)]}
 
 ]
 
