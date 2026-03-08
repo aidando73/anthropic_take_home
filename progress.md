@@ -3,6 +3,9 @@
 
 ✅ Parallelize across the batch dimension - vectorize the implementations (with help from Claude)
 
+CYCLES:  21044
+Speedup over baseline:  7.020243299752899
+
 ✅ Understand how flow works
 
 ✅ Understand vectorized ops - vload and vstore
