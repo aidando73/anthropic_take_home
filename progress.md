@@ -1,7 +1,10 @@
 
 
+⬜️ Understand the hashing algorithm
 
-⬜️ Understand what the kernel actually does
+
+
+✅ Understand tree traversal
 
 Let's consider height 2, rounds=2 case first
 
