@@ -134,6 +134,7 @@ class KernelBuilder:
         tmp_addr = self.alloc_scratch("tmp_addr")
 
         for round in range(rounds):
+            # Parallize across batches - they should be fully parallel
             for i in range(batch_size):
                 i_const = self.scratch_const(i)
                 # idx = mem[inp_indices_p + i]
