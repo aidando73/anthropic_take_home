@@ -121,43 +121,47 @@ class KernelBuilder:
 
         body = []  # array of slots
 
-        # Scalar scratch registers
-        tmp_idx = self.alloc_scratch("tmp_idx")
-        tmp_val = self.alloc_scratch("tmp_val")
-        tmp_node_val = self.alloc_scratch("tmp_node_val")
-        tmp_addr = self.alloc_scratch("tmp_addr")
+        idxes = self.alloc_scratch(f"idxes", 8)
+        for i in range(VLEN):
+            self.add("load", ("const", idxes + i, i))
 
-        for round in range(rounds):
-            # TODO: Vectorize this implementation
-            for i in range(batch_size):
-                i_const = self.scratch_const(i)
-                # idx = mem[inp_indices_p + i]
-                body.append(("alu", ("+", tmp_addr, self.scratch["inp_indices_p"], i_const)))
-                body.append(("load", ("load", tmp_idx, tmp_addr)))
-                # val = mem[inp_values_p + i]
-                body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
-                body.append(("load", ("load", tmp_val, tmp_addr)))
-                # node_val = mem[forest_values_p + idx]
-                body.append(("alu", ("+", tmp_addr, self.scratch["forest_values_p"], tmp_idx)))
-                body.append(("load", ("load", tmp_node_val, tmp_addr)))
-                # val = myhash(val ^ node_val)
-                body.append(("alu", ("^", tmp_val, tmp_val, tmp_node_val)))
-                body.extend(self.build_hash(tmp_val, tmp1, tmp2, round, i))
-                # idx = 2*idx + (1 if val % 2 == 0 else 2)
-                body.append(("alu", ("%", tmp1, tmp_val, two_const)))
-                body.append(("alu", ("==", tmp1, tmp1, zero_const)))
-                body.append(("flow", ("select", tmp3, tmp1, one_const, two_const)))
-                body.append(("alu", ("*", tmp_idx, tmp_idx, two_const)))
-                body.append(("alu", ("+", tmp_idx, tmp_idx, tmp3)))
-                # idx = 0 if idx >= n_nodes else idx
-                body.append(("alu", ("<", tmp1, tmp_idx, self.scratch["n_nodes"])))
-                body.append(("flow", ("select", tmp_idx, tmp1, tmp_idx, zero_const)))
-                # mem[inp_indices_p + i] = idx
-                body.append(("alu", ("+", tmp_addr, self.scratch["inp_indices_p"], i_const)))
-                body.append(("store", ("store", tmp_addr, tmp_idx)))
-                # mem[inp_values_p + i] = val
-                body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
-                body.append(("store", ("store", tmp_addr, tmp_val)))
+        # Scalar scratch registers
+        # tmp_idx = self.alloc_scratch("tmp_idx")
+        # tmp_val = self.alloc_scratch("tmp_val")
+        # tmp_node_val = self.alloc_scratch("tmp_node_val")
+        # tmp_addr = self.alloc_scratch("tmp_addr")
+
+        # for round in range(rounds):
+        #     # TODO: Vectorize this implementation
+        #     for i in range(batch_size):
+        #         i_const = self.scratch_const(i)
+        #         # idx = mem[inp_indices_p + i]
+        #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_indices_p"], i_const)))
+        #         body.append(("load", ("load", tmp_idx, tmp_addr)))
+        #         # val = mem[inp_values_p + i]
+        #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
+        #         body.append(("load", ("load", tmp_val, tmp_addr)))
+        #         # node_val = mem[forest_values_p + idx]
+        #         body.append(("alu", ("+", tmp_addr, self.scratch["forest_values_p"], tmp_idx)))
+        #         body.append(("load", ("load", tmp_node_val, tmp_addr)))
+        #         # val = myhash(val ^ node_val)
+        #         body.append(("alu", ("^", tmp_val, tmp_val, tmp_node_val)))
+        #         body.extend(self.build_hash(tmp_val, tmp1, tmp2, round, i))
+        #         # idx = 2*idx + (1 if val % 2 == 0 else 2)
+        #         body.append(("alu", ("%", tmp1, tmp_val, two_const)))
+        #         body.append(("alu", ("==", tmp1, tmp1, zero_const)))
+        #         body.append(("flow", ("select", tmp3, tmp1, one_const, two_const)))
+        #         body.append(("alu", ("*", tmp_idx, tmp_idx, two_const)))
+        #         body.append(("alu", ("+", tmp_idx, tmp_idx, tmp3)))
+        #         # idx = 0 if idx >= n_nodes else idx
+        #         body.append(("alu", ("<", tmp1, tmp_idx, self.scratch["n_nodes"])))
+        #         body.append(("flow", ("select", tmp_idx, tmp1, tmp_idx, zero_const)))
+        #         # mem[inp_indices_p + i] = idx
+        #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_indices_p"], i_const)))
+        #         body.append(("store", ("store", tmp_addr, tmp_idx)))
+        #         # mem[inp_values_p + i] = val
+        #         body.append(("alu", ("+", tmp_addr, self.scratch["inp_values_p"], i_const)))
+        #         body.append(("store", ("store", tmp_addr, tmp_val)))
 
         body_instrs = self.build(body)
         self.instrs.extend(body_instrs)

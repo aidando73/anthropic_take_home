@@ -99,7 +99,8 @@ instr = [
 
 ]
 
-kb.build_kernel2()
+# kb.build_kernel2()
+kb.build_kernel(forest_height, len(forest.values), batch_size, rounds)
 
 machine = Machine(
     mem,
